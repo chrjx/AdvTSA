@@ -1,0 +1,79 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# --- reuse the Qn function from Part 1 ---
+def Qn(phi1, phi2, y, c1, c2, threshold, delay):
+    """Prediction-error loss for given phi1, phi2"""
+    n = len(y)
+    rss = 0.0
+    for t in range(1, n):
+        lag_idx = max(0, t - delay)
+        if y[lag_idx] <= threshold:
+            yhat = c1 + phi1 * y[t-1]
+        else:
+            yhat = c2 + phi2 * y[t-1]
+        rss += (y[t] - yhat)**2
+    return rss
+
+# --- simulate the data using your Part 1 function ---
+def simulate_setar(
+    T,
+    c1=3.0, phi1=0.5, sigma1=1.0,
+    c2=-3.0, phi2=-0.5, sigma2=1.0,
+    threshold=-2.5, delay=1,
+    burn=200, y0=0.0, seed=42
+):
+    np.random.seed(seed)
+    N = T + burn
+    y = np.zeros(N + 1)
+    y[0] = y0
+    for t in range(1, N + 1):
+        lag_idx = max(0, t - delay)
+        if y[lag_idx] <= threshold:
+            eps = np.random.normal(0.0, sigma1)
+            y[t] = c1 + phi1 * y[t-1] + eps
+        else:
+            eps = np.random.normal(0.0, sigma2)
+            y[t] = c2 + phi2 * y[t-1] + eps
+    return y[burn+1:]
+
+# --- true parameters ---
+params = dict(c1=3.0, c2=-3.0, threshold=-2.5, delay=1)
+phi1_true, phi2_true = 0.5, -0.5
+
+# --- simulate a long series ---
+y_full = simulate_setar(T=3000, **params)
+
+# --- grid of candidate values for phi1, phi2 ---
+phi1_vals = np.linspace(0.2, 0.8, 80)
+phi2_vals = np.linspace(-0.8, -0.2, 80)
+
+# --- subsets for N (as in the assignment) ---
+subsets = {
+    "1:30": y_full[:30],
+    "1:300": y_full[:300],
+    "1:3000": y_full[:3000],
+    "1001:1030": y_full[1000:1030],
+    "1001:1300": y_full[1000:1300],
+}
+
+# --- color palette similar to R’s example ---
+from matplotlib.colors import LinearSegmentedColormap
+colors = ["#00007F","blue","#007FFF","cyan","#7FFF7F","yellow","#FF7F00","red","#7F0000"]
+color_map = LinearSegmentedColormap.from_list("custom", colors, N=256)
+
+# --- compute and plot contours ---
+fig, axes = plt.subplots(1, 3, figsize=(16,5), constrained_layout=True)
+for ax, (label, y_sub) in zip(axes, list(subsets.items())[:3]):  # plot first 3 for clarity
+    Q = np.zeros((len(phi1_vals), len(phi2_vals)))
+    for i, p1 in enumerate(phi1_vals):
+        for j, p2 in enumerate(phi2_vals):
+            Q[i,j] = Qn(p1, p2, y_sub, **params)
+    cs = ax.contourf(phi1_vals, phi2_vals, Q.T, levels=30, cmap=color_map)
+    ax.set_title(f"Loss contour Q_N(φ₁, φ₂) for subset {label}")
+    ax.set_xlabel(r"$\phi_1$")
+    ax.set_ylabel(r"$\phi_2$")
+    ax.axvline(phi1_true, color='black', ls='--', lw=1)
+    ax.axhline(phi2_true, color='black', ls='--', lw=1)
+fig.colorbar(cs, ax=axes, shrink=0.8, location='right', label="RSS (Qₙ)")
+plt.show()
