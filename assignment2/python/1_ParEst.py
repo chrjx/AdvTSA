@@ -4,7 +4,7 @@ from scipy.optimize import minimize
 import matplotlib.pyplot as plt
 
 # --------------------------------------------------------------------
-# 1. Simulate a SETAR(2,1,1) process (two regimes, AR(1) per regime)
+# 1. Simulation Func
 # --------------------------------------------------------------------
 def simulate_setar(
     T,
@@ -38,7 +38,7 @@ def simulate_setar(
     return y[burn+1:], s[burn+1:]
 
 # --------------------------------------------------------------------
-# 2. Define the loss function Qn(θ) = sum_t (y_t - ŷ_t(θ))^2
+# 2. Loss
 # --------------------------------------------------------------------
 def Qn(theta, y, c1, c2, threshold, delay):
     """Compute the prediction error loss for given φ₁, φ₂."""
