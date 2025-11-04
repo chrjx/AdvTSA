@@ -15,7 +15,7 @@ def simulate_model(T=50, a=0.4, sigma_v=1.0, sigma_e=1.0):
 
 
 #----------------------------------------------------------------
-# Stabilized EKF estimation function
+# EKF estimation function
 #----------------------------------------------------------------
 def EKF_stable(y, aInit=0.5, aVarInit=1.0, sigma_v=1.0, sigma_e=1.0, q_a=1e-3, clip_a=(-1.5, 1.5)):
     """
