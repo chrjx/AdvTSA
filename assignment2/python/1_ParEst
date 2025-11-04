@@ -67,23 +67,20 @@ true_params = dict(
 T = 500
 y, s = simulate_setar(T=T, burn=100, y0=0.0, seed=42, **true_params)
 
-# Objective function to minimize (only φ₁, φ₂ are estimated)
 def objective(theta):
     return Qn(theta, y=y,
               c1=true_params['c1'], c2=true_params['c2'],
               threshold=true_params['threshold'], delay=true_params['delay'])
 
-# Initial guess
 theta0 = np.array([0.1, -0.1])
 
-# Run optimization (BFGS)
 res = minimize(objective, theta0, method='BFGS', options={'disp': True})
 
 phi1_hat, phi2_hat = res.x
 rss_min = res.fun
 
 # --------------------------------------------------------------------
-# 4. Compare with closed-form OLS per regime (for reference)
+# 4. Compare with closed-form OLS
 # --------------------------------------------------------------------
 mask1 = np.array([(y[max(0, i-true_params['delay'])] <= true_params['threshold'])
                   for i in range(1, len(y))])

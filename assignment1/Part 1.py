@@ -23,7 +23,6 @@ def simulate_setar(
     s = np.zeros(N + 1, dtype=int)
 
     for t in range(1, N + 1):
-        # choose regime using self-exciting threshold on y_{t-delay}
         lag_idx = max(0, t - delay)
         if y[lag_idx] <= threshold:
             s[t] = 1
@@ -39,10 +38,10 @@ def simulate_setar(
 
 def simulate_igar(
     T,
-    c=(0.0, 0.8),           # intercepts per regime (r=1,2)
-    phi=(0.85, -0.2),       # AR(1) coeffs per regime
-    sigma=(1.0, 1.3),       # innovation std per regime
-    p=(0.6, 0.4),           # P(S_t = r), independent over t
+    c=(0.0, 0.8),          
+    phi=(0.85, -0.2),    
+    sigma=(1.0, 1.3),  
+    p=(0.6, 0.4), 
     burn=200,
     y0=0.0,
     seed=None
@@ -179,12 +178,10 @@ def plot_grid_for_model(simulator, row_param_list, row_titles=None, sim_kwargs=N
     ncols = 4
     fig, axs = plt.subplots(nrows, ncols, figsize=(15, 10), constrained_layout=True)
 
-    # ensure axs is 2D array even if nrows=1
     axs = np.atleast_2d(axs)
 
     for i, rp in enumerate(row_param_list):
         rp_local = dict(rp)
-        # Add seed only if simulator accepts it
         if seed_base is not None:
             sig = inspect.signature(simulator)
             if "seed" in sig.parameters:
