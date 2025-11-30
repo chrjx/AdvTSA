@@ -297,6 +297,67 @@ axes[1,2].axhline(0, color='k', lw=0.5)
 axes[1,2].set_xlabel('Lag'); axes[1,2].set_ylabel('ACF')
 axes[1,2].set_title('ACF of Residuals'); axes[1,2].legend(); axes[1,2].grid(True, alpha=0.3)
 
+# --- Save each subplot separately ---
+# 1. Model selection
+fig_ms, ax = plt.subplots(figsize=(6, 4))
+ax.plot(df['m'], df['AIC'], 'bo-', lw=2, ms=8, label='AIC')
+ax.plot(df['m'], df['BIC'], 'rs-', lw=2, ms=8, label='BIC')
+ax.axvline(best_m, color='g', ls='--', lw=2, alpha=0.7)
+ax.set_xlabel('Number of States'); ax.set_ylabel('IC')
+ax.set_title('2.1.2: Model Selection'); ax.legend()
+ax.grid(True, alpha=0.3); ax.set_xticks(range(2, 7))
+fig_ms.tight_layout(); fig_ms.savefig('part21_model_selection.png', dpi=150, bbox_inches='tight'); plt.close(fig_ms)
+
+# 2. Correlation matrix
+if corr is not None:
+    fig_cm, ax = plt.subplots(figsize=(6, 5))
+    im = ax.imshow(corr, cmap='RdBu_r', vmin=-1, vmax=1)
+    ax.set_xticks(range(4)); ax.set_yticks(range(4))
+    ax.set_xticklabels(names); ax.set_yticklabels(names)
+    for i in range(4):
+        for j in range(4):
+            ax.text(j, i, f'{corr[i,j]:.2f}', ha='center', va='center', fontsize=9)
+    fig_cm.colorbar(im, ax=ax, fraction=0.046)
+    ax.set_title('2.1.4: Correlation Matrix')
+    fig_cm.tight_layout(); fig_cm.savefig('part21_correlation_matrix.png', dpi=150, bbox_inches='tight'); plt.close(fig_cm)
+
+# 3. Model fit
+fig_mf, ax = plt.subplots(figsize=(8, 4))
+ax.plot(t, y_obs, 'k.', ms=1, alpha=0.3, label='Observed')
+ax.plot(t[1:], x_filt[:, -1], 'r-', lw=1, label='Filtered')
+ax.set_xlabel('Time (hours)'); ax.set_ylabel('Stormwater')
+ax.set_title('2.1.5: Model Fit'); ax.legend(); ax.grid(True, alpha=0.3)
+fig_mf.tight_layout(); fig_mf.savefig('part21_model_fit.png', dpi=150, bbox_inches='tight'); plt.close(fig_mf)
+
+# 4. Residuals over time
+fig_rt, ax = plt.subplots(figsize=(8, 4))
+ax.plot(t[1:], std_res, 'b-', lw=0.4, alpha=0.7)
+ax.axhline(0, color='k', lw=1)
+ax.axhline(2, color='r', ls='--', lw=1); ax.axhline(-2, color='r', ls='--', lw=1)
+ax.set_xlabel('Time (hours)'); ax.set_ylabel('Std. Residuals')
+ax.set_title('Residuals over Time'); ax.grid(True, alpha=0.3)
+fig_rt.tight_layout(); fig_rt.savefig('part21_residuals_time.png', dpi=150, bbox_inches='tight'); plt.close(fig_rt)
+
+# 5. Histogram of residuals
+fig_hist, ax = plt.subplots(figsize=(6, 4))
+ax.hist(std_res, bins=40, density=True, alpha=0.7, edgecolor='black')
+x_norm = np.linspace(-4, 4, 100)
+ax.plot(x_norm, stats.norm.pdf(x_norm), 'r-', lw=2, label='N(0,1)')
+ax.set_xlabel('Std. Residuals'); ax.set_ylabel('Density')
+ax.set_title('Residual Distribution'); ax.legend(); ax.grid(True, alpha=0.3)
+fig_hist.tight_layout(); fig_hist.savefig('part21_residual_hist.png', dpi=150, bbox_inches='tight'); plt.close(fig_hist)
+
+# 6. ACF of residuals
+fig_acf, ax = plt.subplots(figsize=(6, 4))
+ax.bar(range(1, 21), acf, alpha=0.7, color='blue')
+ci = 1.96 / np.sqrt(len(std_res))
+ax.axhline(ci, color='r', ls='--', lw=1, label='95% CI')
+ax.axhline(-ci, color='r', ls='--', lw=1)
+ax.axhline(0, color='k', lw=0.5)
+ax.set_xlabel('Lag'); ax.set_ylabel('ACF')
+ax.set_title('ACF of Residuals'); ax.legend(); ax.grid(True, alpha=0.3)
+fig_acf.tight_layout(); fig_acf.savefig('part21_acf_residuals.png', dpi=150, bbox_inches='tight'); plt.close(fig_acf)
+
 plt.tight_layout()
 plt.savefig('part21_complete_analysis.png', dpi=150, bbox_inches='tight')
 plt.show()
