@@ -62,6 +62,103 @@ class BaseModel:
     def fit_predict(self, h: int, data_mgr, split, Xy: Dict[str, Tuple[pd.DataFrame, np.ndarray]]) -> Dict[str, Any]:
         raise NotImplementedError
 
+class StaticARX(BaseModel):
+    """
+    Simple static ARX estimated by OLS.
+    Baseline benchmark model.
+    """
+
+    def fit_predict(self, h, data_mgr, split, Xy):
+        p_max = data_mgr.p_max
+
+        Xtr, ytr = Xy["train_df"]
+        Xte, yte = Xy["test_df"]
+
+        beta = np.linalg.lstsq(Xtr.values, ytr, rcond=None)[0]
+        pred = Xte.values @ beta
+        pred = clip_pred(pred, 0.0, p_max)
+
+        resid = yte - pred
+
+        return {
+            "pred": pred,
+            "y": yte,
+            "resid": resid,
+            "rb": ResidualBundle(resid=resid),
+            "beta": beta,
+            "names": Xte.columns.tolist(),
+            "config": {"type": "Static ARX"},
+        }
+
+class TAR_ARX(BaseModel):
+    """
+    Threshold ARX using wind speed as regime variable.
+    """
+
+    def __init__(self, qtiles=(0.3, 0.5, 0.7)):
+        self.qtiles = qtiles
+        self.configs_ = {}
+
+    def fit_predict(self, h, data_mgr, split, Xy):
+        p_max = data_mgr.p_max
+
+        Xtr, ytr = Xy["train_df"]
+        Xte, yte = Xy["test_df"]
+
+        Ws_tr = split.train_df[f"Ws{h}"].values
+        Ws_te = split.test_df[f"Ws{h}"].values
+
+        best = None
+
+        for q in self.qtiles:
+            c = np.quantile(Ws_tr, q)
+
+            idx_L = Ws_tr <= c
+            idx_H = Ws_tr > c
+
+            if idx_L.sum() < 50 or idx_H.sum() < 50:
+                continue
+
+            beta_L = np.linalg.lstsq(Xtr.values[idx_L], ytr[idx_L], rcond=None)[0]
+            beta_H = np.linalg.lstsq(Xtr.values[idx_H], ytr[idx_H], rcond=None)[0]
+
+            pred = np.where(
+                Ws_te <= c,
+                Xte.values @ beta_L,
+                Xte.values @ beta_H,
+            )
+            pred = clip_pred(pred, 0.0, p_max)
+
+            rmse_val = rmse(yte, pred)
+
+            if best is None or rmse_val < best["rmse"]:
+                best = {
+                    "c": float(c),
+                    "rmse": rmse_val,
+                    "beta_L": beta_L,
+                    "beta_H": beta_H,
+                }
+
+        assert best is not None
+        self.configs_[h] = best
+
+        pred = np.where(
+            Ws_te <= best["c"],
+            Xte.values @ best["beta_L"],
+            Xte.values @ best["beta_H"],
+        )
+        pred = clip_pred(pred, 0.0, p_max)
+        resid = yte - pred
+
+        return {
+            "pred": pred,
+            "y": yte,
+            "resid": resid,
+            "rb": ResidualBundle(resid=resid),
+            "names": Xte.columns.tolist(),
+            "config": best,
+        }
+
 
 # =============================================================================
 # 1) Kalman ARX with white observation noise (time-varying coefficients)
